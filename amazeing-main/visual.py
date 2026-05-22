@@ -166,6 +166,10 @@ class Visualinho:
     def _build_windows(self) -> None:
         """Create/resize sub-windows for menu, maze, info."""
         max_y, max_x = self._scr.getmaxyx()
+        # wipe stdscr so a shrunken maze does not leave ghost cells from
+        # the previous (larger) maze in the now-uncovered region
+        self._scr.clear()
+        self._scr.noutrefresh()
 
         maze_cols = self.w * 4 + 1
         maze_rows = self.h * 2 + 1
