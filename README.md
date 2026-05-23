@@ -1,5 +1,3 @@
-*This project has been created as part of the 42 curriculum by tcostant, acentron.*
-
 # A-MAZE-ING
 
 ```
@@ -11,20 +9,17 @@
 ╚═╝  ╚═╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚══════╝╚══════╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝
 ```
 
+*Originally created as part of the 42 curriculum by tcostant & acentron.*
+
+---
 
 ## Description
 
-A-MAZE-ING is a terminal maze generator and visualiser written in Python.
-It reads a plain-text config file, generates a maze using one of three
-carving algorithms (DFS, Prim, or Kruskal), solves it with BFS, and draws
-it directly in the terminal using ANSI escape codes and box-drawing
-characters. An interactive numbered menu lets you regenerate, change
-algorithm, toggle perfect mode, show/hide the animated solution, and
-customise colours and dimensions — all at runtime.
+A-MAZE-ING is a terminal maze generator and visualiser written in Python. It reads a plain-text config file, generates a maze using one of three carving algorithms (DFS, Prim, or Kruskal), solves it with bidirectional BFS, and renders it in a full `curses` TUI with threaded animations.
 
-A standalone pip-installable package (`mazegen`) ships alongside the main
-project. It exposes a clean `MazeGenerator` class that any Python project
-can import without pulling in the rest of the codebase.
+The interface is split into three panels — a keybind menu on the left, the maze in the centre, and a live info panel on the right. All settings (algorithm, dimensions, entry/exit, seed, perfect mode, colours) are editable at runtime without restarting.
+
+A standalone pip-installable package (`mazegen`) ships alongside the main project. It exposes a clean `MazeGenerator` class usable in any Python project without pulling in the TUI.
 
 
 ## Instructions
@@ -42,9 +37,7 @@ make package        # build mazegen wheel + tarball
 
 ## Config file format
 
-The config file uses a simple `KEY=VALUE` format. Lines starting with `#`
-and blank lines are ignored. All keys are required except `SEED` and
-`ALGORITHM`.
+`KEY=VALUE` format. Lines starting with `#` and blank lines are ignored. `SEED` and `ALGORITHM` are optional.
 
 ```
 # Example config.txt
@@ -60,16 +53,16 @@ ALGORITHM=DFS
 
 ### Keys
 
-| Key           | Type      | Description                                                        |
-|---------------|-----------|--------------------------------------------------------------------|
-| `WIDTH`       | int > 0   | Maze width in cells                                                |
-| `HEIGHT`      | int > 0   | Maze height in cells                                               |
-| `ENTRY`       | `x,y`     | Entry cell coordinates (zero-indexed, inside the grid)             |
-| `EXIT`        | `x,y`     | Exit cell coordinates (zero-indexed, inside the grid, ≠ ENTRY)     |
-| `OUTPUT_FILE` | string    | Path of the output file written after each generation              |
-| `PERFECT`     | `TRUE` / `FALSE` | `TRUE` → one unique path; `FALSE` → ~15% of internal walls broken |
-| `SEED`        | int or empty | Optional RNG seed for reproducible mazes; leave blank for random |
-| `ALGORITHM`   | `DFS` / `PRIM` / `KRUSKAL` | Carving algorithm (default: `DFS`)            |
+| Key           | Type                        | Description                                                    |
+|---------------|-----------------------------|----------------------------------------------------------------|
+| `WIDTH`       | int > 0                     | Maze width in cells                                            |
+| `HEIGHT`      | int > 0                     | Maze height in cells                                           |
+| `ENTRY`       | `x,y`                       | Entry cell (zero-indexed, inside grid)                         |
+| `EXIT`        | `x,y`                       | Exit cell (zero-indexed, inside grid, ≠ ENTRY)                 |
+| `OUTPUT_FILE` | string                      | Path written after each generation                             |
+| `PERFECT`     | `TRUE` / `FALSE`            | `TRUE` → single path; `FALSE` → ~15% extra walls removed      |
+| `SEED`        | int or empty                | Optional RNG seed for reproducible mazes                       |
+| `ALGORITHM`   | `DFS` / `PRIM` / `KRUSKAL` | Carving algorithm (default: `DFS`)                             |
 
 ### Validation rules
 
@@ -79,46 +72,71 @@ ALGORITHM=DFS
 - Malformed lines (no `=`) raise `ValueError` with the line number.
 
 
-## Interactive menu
-
-After generation the program drops into a numbered text menu redrawn above
-the maze on every action:
+## TUI layout
 
 ```
---- MAZE MENU ---
-1. Generate new maze
-2. Pick algo
-3. Perfect Maze on/off
-4. Show solution
-5. Hide solution
-6. Change maze colors and settings
-7. Quit
+┌─ MENU (left) ──────────┬─── MAZE (centre) ───┬─── INFO (right) ──┐
+│  [R] REGEN             │                      │  Algorithm: DFS   │
+│  [S] SETUP             │   actual maze here   │  Perfect:   YES   │
+│  [P] PATH              │                      │  Size:  20 × 20   │
+│  [C] COLOR             │                      │  Seed:  —         │
+│  [Q] QUIT              │                      │                   │
+└────────────────────────┴──────────────────────┴───────────────────┘
 ```
 
-| Choice | Action |
-|--------|--------|
-| `1` | Regenerate with current config and animate the carving |
-| `2` | Pick algorithm: 1 DFS · 2 Prim · 3 Kruskal, then regenerate |
-| `3` | Toggle `PERFECT` flag and regenerate |
-| `4` | Animate BFS solution path (box-drawing connectors + ♘ at exit) |
-| `5` | Hide solution overlay |
-| `6` | Open colour / size / entry-exit sub-menu (see below) |
-| `7` or `q` | Quit |
+The maze panel is centred in the available space and reflows on terminal resize.
 
-### Sub-menu 6 — colours and settings
 
-| Sub-choice | Action |
-|------------|--------|
-| `1` | Change wall colour: 1 Green · 2 Yellow · 3 Red · 4 Blue |
-| `2` | Change "42" pattern colour: same four options |
-| `3` | Set new width and height (min 8, max 25). Exit coords are clamped automatically |
-| `4` | Set new entry and exit coordinates (`x, y` format). Validated before applying |
-| `5` | Back to main menu |
+## Keybindings
+
+| Key              | Action                                      |
+|------------------|---------------------------------------------|
+| `R`              | Regenerate maze with current config         |
+| `S`              | Open Setup form                             |
+| `P`              | Run / toggle bidirectional BFS animation    |
+| `C`              | Open Color picker                           |
+| `Q` / `ESC`      | Quit                                        |
+| `↑` / `k`        | Move menu selection up                      |
+| `↓` / `j`        | Move menu selection down                    |
+| `ENTER`          | Confirm selected menu item                  |
+
+### Setup form (`S`)
+
+Editable fields with keyboard navigation (`↑↓` to move, `←→` / `Space` to toggle enums/booleans, digits to type integers, `Backspace` to delete):
+
+| Field       | Type   | Notes                                      |
+|-------------|--------|--------------------------------------------|
+| Algorithm   | enum   | `DFS` · `PRIM` · `KRUSKAL`                 |
+| Perfect     | bool   | YES / NO                                   |
+| Width       | int    | min 1                                      |
+| Height      | int    | min 1                                      |
+| Entry X/Y   | int    | validated against grid bounds and 42 pattern |
+| Exit X/Y    | int    | same                                       |
+| Seed        | int    | leave empty for random                     |
+
+`ENTER` applies and regenerates. `ESC` cancels.
+
+### Color picker (`C`)
+
+Two independently configurable colour schemes — wall colour and 42-pattern colour. `↑↓` switches between sections, `←→` cycles through palettes, digit keys (`1`–`6`) jump directly. Changes are previewed live on the maze; `ENTER` keeps them, `ESC` reverts.
+
+Available palettes: Green · Yellow · Red · Blue · White · Cyan.
+
+
+## Animations
+
+Two background threads drive animations independently of the input loop:
+
+**Carve animation** — triggered on every regeneration. Replays `carve_steps` (wall removals during generation) followed by `knock_steps` (non-perfect extra removals) at ~32 µs per step.
+
+**Solve animation** — triggered by `P`. Runs bidirectional BFS and streams the expanding frontiers layer by layer: cyan from entry (`A`), magenta from goal (`B`). Once the frontiers meet, the shortest path is drawn in yellow with box-drawing connectors (`─`, `│`, `╭`, `╮`, `╰`, `╯`) and a `♘` at the exit.
+
+Both animations can be interrupted at any time (e.g. by pressing `R` to regenerate).
 
 
 ## Output file format
 
-Written to `OUTPUT_FILE` after every generation or setting change.
+Written to `OUTPUT_FILE` after every generation.
 
 ```
 <WIDTH hex digits per row>   ← HEIGHT rows
@@ -129,11 +147,8 @@ Written to `OUTPUT_FILE` after every generation or setting change.
 ```
 
 - **Grid rows:** one uppercase hex digit per cell, top-to-bottom.
-- **Cell encoding:** 4-bit nibble — each bit is a closed wall.
-  `N=bit0 (1)`, `E=bit1 (2)`, `S=bit2 (4)`, `W=bit3 (8)`.
-  `0xF` = all four walls closed. `0x0` = all open.
-- **Path:** consecutive `N`/`E`/`S`/`W` letters from entry to exit
-  (shortest path via BFS). Empty if no path exists.
+- **Cell encoding:** 4-bit nibble. Each bit is a closed wall: `N=bit0 (1)`, `E=bit1 (2)`, `S=bit2 (4)`, `W=bit3 (8)`. `0xF` = all walls closed. `0x0` = all open.
+- **Path:** consecutive `N`/`E`/`S`/`W` letters (shortest path via BFS). Empty if no path exists.
 
 ### Example — 5 × 4 maze
 
@@ -148,74 +163,62 @@ Written to `OUTPUT_FILE` after every generation or setting change.
 EESSESS
 ```
 
-`9` = `0b1001` = N + W closed (top-left corner).
-`6` = `0b0110` = E + S closed.
+`9` = `0b1001` = N + W closed (top-left corner). `6` = `0b0110` = E + S closed.
 
 
 ## Cell encoding reference
 
-| Bit | Value | Wall |
-|-----|-------|------|
+| Bit | Value | Wall  |
+|-----|-------|-------|
 |  0  |   1   | North |
 |  1  |   2   | East  |
 |  2  |   4   | South |
 |  3  |   8   | West  |
 
 
-## Maze generation algorithm
+## Maze generation algorithms
 
-### Which algorithm and why
+### DFS (default)
 
-The **default** algorithm is **randomised iterative Depth-First Search
-(DFS)**, sometimes called the "recursive backtracker".
+Randomised iterative depth-first search ("recursive backtracker"). Produces mazes with long winding corridors and a single pronounced solution path. The iterative stack-based implementation avoids Python's recursion limit on large grids.
 
-We chose it as the default because:
+### Prim
 
-- It produces mazes with **long, winding corridors** and a single
-  pronounced solution path — visually striking and immediately
-  readable.
-- The iterative stack-based implementation avoids Python's recursion
-  limit even for large grids.
-- It is conceptually the simplest of the three, making the code easy
-  to follow and extend.
+Maintains a frontier of candidate walls between visited and unvisited cells. At each step a random wall is picked; if the unvisited side is still unvisited the wall is carved. Produces bushier mazes with more branches and shorter average dead-ends.
 
-Two additional algorithms are available:
+### Kruskal
 
-**Randomised Prim's** — maintains a frontier of candidate walls
-between visited and unvisited cells. At each step a random wall is
-picked; if the unvisited side is still unvisited the wall is carved.
-This produces mazes with more branches and shorter average dead-ends,
-giving a "bushier" texture compared to DFS.
-
-**Randomised Kruskal's** — builds the complete list of internal edges,
-shuffles it, then walks the list with a Union-Find structure (path
-compression + union by rank). An edge is carved whenever its two
-endpoints belong to different components. The result is a statistically
-uniform spanning tree — passages are distributed more evenly across
-the grid.
+Builds the complete list of internal edges, shuffles it, then walks the list with a Union-Find structure (path compression + union by rank). An edge is carved when its two endpoints are in different components. Results in a statistically uniform spanning tree — passages distributed more evenly across the grid.
 
 ### Non-perfect mode (`PERFECT=FALSE`)
 
-After the spanning-tree carve, ~15% of the remaining internal walls
-(excluding border walls and walls adjacent to the "42" pattern) are
-randomly removed. This introduces cycles so that multiple paths exist
-between any two cells.
+After the spanning-tree carve, ~15% of the remaining internal walls (excluding border walls and walls adjacent to the "42" pattern) are randomly removed, introducing cycles.
 
 ### "42" pattern
 
-When the maze is at least 11 × 11 cells, a "42" silhouette is
-embedded at centre before carving. The pattern cells are pre-marked as
-visited so every algorithm skips them, leaving them as solid walls.
-The pattern is not placed if it would overlap the entry or exit cell,
-or if the maze is too small.
+When the maze is at least 11 × 11 cells, a "42" silhouette is embedded at centre before carving. Pattern cells are pre-marked visited so every algorithm skips them, leaving them as solid walls. The pattern is skipped if it would overlap entry or exit, or if the maze is too small.
+
+### `trextre` post-pass
+
+After carving, the generator scans all 3 × 3 blocks for fully-open areas (all 12 internal passages present). Any such block has one wall re-added between the centre cell and its southern neighbour. This prevents statistically unlikely but possible large open regions that break the maze aesthetic.
+
+
+## Solver
+
+`MazeSolver` in `solver.py` exposes three methods:
+
+- `bfs(start, goal)` — monodirectional BFS, returns `list[(x, y)]`.
+- `bfs_bidir(start, goal)` — bidirectional BFS, returns `(path, steps_log)` where each log entry is `(side, cell, parent)`.
+- `bfs_bidir_layers(start, goal)` — same but groups expansion steps into BFS wavefront layers, used by the solve animation.
+
+`MazeSolver` depends only on `generator.grid`, `width`, and `height` — it works with any object exposing those three attributes.
 
 
 ## Reusable components
 
-### `mazegen` package
+### `mazegen` standalone package
 
-The file `mazegen.py` is a **self-contained, zero-dependency** Python
-module that can be installed as a pip package:
+Self-contained, zero-dependency module installable as a pip package:
 
 ```bash
 pip install mazegen-1.0.0-py3-none-any.whl
@@ -230,20 +233,16 @@ maze = MazeGenerator(
     seed=42,
 )
 print(maze.grid)      # list[list[int]]  — grid[y][x], nibble per cell
-print(maze.solution)  # 'NNEESS...'      — shortest path letters
+print(maze.solution)  # 'SESESEESSE...'  — N/E/S/W letters
 maze.write_output('maze.txt')
-maze.print_ascii()    # quick ASCII preview
+maze.print_ascii()
 ```
 
-It uses only the standard library (`random`, `collections`, `sys`)
-and implements DFS generation + BFS solving. It is entirely
-independent from `generator.py`, `visual.py`, `solver.py`, and
-`user.py` — you can drop the wheel into any Python 3.10+ project.
+Uses only the standard library (`random`, `collections`, `sys`). DFS generation + BFS solving. Entirely independent from the main project's modules.
 
 ### `generator.MazeGenerator`
 
-The main `MazeGenerator` class (in `generator.py`) is also reusable
-independently of the UI:
+Main generator, config-driven:
 
 ```python
 from maze_parser import parse_input
@@ -251,12 +250,11 @@ from generator import MazeGenerator
 
 config = parse_input("config.txt")
 maze = MazeGenerator(config)
-print(maze.grid)          # list[list[int]]
+print(maze.grid)
 maze.write_output("out.txt")
 ```
 
-`carve_steps` and `knock_steps` are public lists of wall-removal
-events that can be replayed by any renderer (not just `Visualinho`).
+`carve_steps` and `knock_steps` are public lists of wall-removal events replayable by any renderer.
 
 ### `solver.MazeSolver`
 
@@ -264,109 +262,34 @@ events that can be replayed by any renderer (not just `Visualinho`).
 from solver import MazeSolver
 
 solver = MazeSolver(maze)
-path = solver.bfs(maze.entry, maze.exit)  # list[(x, y)]
+path = solver.bfs(maze.entry, maze.exit)           # list[(x, y)]
+path, log = solver.bfs_bidir(maze.entry, maze.exit)
+path, layers = solver.bfs_bidir_layers(maze.entry, maze.exit)
 ```
-
-`MazeSolver` depends only on `generator.grid`, `width`, and `height`.
-It can be used with any object that exposes those three attributes.
 
 ### `maze_parser.MazeConfig` + `parse_input`
 
-`MazeConfig` is a plain dataclass-style object. `parse_input` returns
-a validated `MazeConfig` from any `KEY=VALUE` text file following the
-format above. Both can be reused to add new frontends (e.g. a web API
-or a GUI) without touching generation logic.
+`parse_input` returns a validated `MazeConfig` from any `KEY=VALUE` text file. Both can be reused to add new frontends (web API, GUI) without touching generation logic.
 
 
 ## Project structure
 
 ```
-a_maze_ing.py      Entry point — argument parsing, wires config → user()
+a_maze_ing.py      Entry point — argument parsing, wires config → Visualinho
 generator.py       MazeGenerator: DFS / Prim / Kruskal + "42" pattern
-                   + non-perfect mode + BFS output path
+                   + non-perfect mode + trextre post-pass
 maze_parser.py     parse_input() + MazeConfig (config file → validated object)
-solver.py          MazeSolver: BFS path as list of (x, y) coordinates
-visual.py          Visualinho: ANSI terminal renderer + animated carving
-                   + animated solution path
-user.py            Interactive menu loop — ties all modules together
-mazegen.py         Standalone pip package (DFS only, zero dependencies)
+solver.py          MazeSolver: BFS, bidirectional BFS, layer-grouped BFS
+visual.py          Visualinho: curses TUI, threaded carve + solve animations,
+                   setup form, color picker, live info panel, resize handling
+user.py            Thin entry point: wires parse_input → MazeGenerator → Visualinho
+mazegen.py         Standalone pip package (DFS + BFS, zero dependencies)
 config.txt         Default config file
 maze.txt           Last generated output (overwritten on each run)
 pyproject.toml     Build metadata for the mazegen wheel
 requirements.txt   Dev dependencies (flake8, mypy, pytest, build)
 Makefile           Convenience targets: install / run / lint / test / package
 ```
-
-
-## Team & project management
-
-### Roles
-
-| Member   | Responsibilities |
-|----------|-----------------|
-| tcostant | Core maze generation (`generator.py`): DFS, Prim, Kruskal, "42" pattern, non-perfect mode, BFS output path. `mazegen` standalone package. Config parser (`maze_parser.py`). Entry point (`a_maze_ing.py`). |
-| acentron | Terminal visualiser (`visual.py`): ANSI renderer, box-drawing walls, path animation, carving animation. Interactive menu (`user.py`): all runtime controls, colour picker, dimension/entry-exit editing. `solver.py`. |
-
-### Planning and how it evolved
-
-**Initial plan:** implement a basic DFS generator writing a hex grid to
-file, add a simple terminal visualiser, and deliver on time.
-
-**How it evolved:**
-
-- We added Prim and Kruskal relatively early once DFS was stable, because
-  the algorithm selection was in the spec and the Union-Find + frontier
-  abstractions were interesting to build.
-- The "42" pattern started as a fun stretch goal and ended up requiring a
-  pre-pass over the grid before carving — which led to the `_pattern_cells`
-  / `_visited` pre-marking design used by all three algorithms.
-- The standalone `mazegen` package was not in the original plan; we added
-  it after realising the generator core had no UI dependencies and could
-  be shipped cleanly.
-- The animated carving (`animate_generation`) was added late because we
-  noticed `carve_steps` was already being recorded and replaying it was
-  almost free.
-- The interactive menu grew organically: colour picking and
-  dimension/entry-exit editing were added after basic regen and algo
-  switching worked.
-
-### What worked well
-
-- Keeping generation (`generator.py`), solving (`solver.py`), rendering
-  (`visual.py`), and the menu loop (`user.py`) in separate modules made
-  it easy to work in parallel without conflicts.
-- Recording `carve_steps` and `knock_steps` as lists of events gave us
-  animation for free with no changes to the core logic.
-- The nibble encoding (one hex digit per cell, 4 bits = 4 walls) is
-  compact, directly writable to the output file, and easy to manipulate
-  with bitwise ops.
-- Type annotations throughout the codebase made `mypy` useful as a
-  lightweight test layer.
-
-### What could be improved
-
-- `user.py` hardcodes `config.txt` instead of using the path passed on
-  the command line — a late oversight we did not get to fix.
-- The interactive menu is a plain numbered list; a full `curses` TUI with
-  arrow-key navigation would be more ergonomic on large terminals.
-- There are no automated tests for `visual.py` and `user.py` (terminal
-  output is hard to unit-test without mocking).
-- The `trextre()` post-processing step in `generator.py` fixes a rare
-  isolated-cell edge case but is undocumented and should be either
-  properly explained or absorbed into the carving logic.
-
-### Tools used
-
-| Tool | Purpose |
-|------|---------|
-| **Python 3.10+** | Primary language |
-| **flake8** | PEP 8 style linting |
-| **mypy** | Static type checking (strict mode) |
-| **pytest** | Unit testing |
-| **build / setuptools** | Packaging `mazegen` as a wheel |
-| **pyfiglet** | ASCII art banner (imported but rendered at terminal level) |
-| **Git** | Version control |
-| **GitHub Copilot / ChatGPT** | Used for boilerplate suggestions and documentation drafts; all output reviewed, tested, and validated by both team members |
 
 
 ## Resources
